@@ -1,0 +1,15 @@
+{
+	type = "steelhelm"
+	operation = "remove"
+	item = "Railcraft:armor.steel.helmet"
+}
+{
+	type = "steelchest"
+	operation = "remove"
+	item = "Railcraft:armor.steel.plate"
+}
+{
+	type = "bronzeboots"
+	operation = "remove"
+	item = "IC2:itemArmorBronzeBoots"
+}

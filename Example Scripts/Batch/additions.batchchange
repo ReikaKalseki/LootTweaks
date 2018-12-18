@@ -1,0 +1,36 @@
+{
+	type = "addingathing"
+	operation = "add"
+	item = "mod1:thething:1"
+	min_size = 1
+	max_size = 2
+	weight = 4
+}
+{
+	type = "anotherthing"
+	operation = "add"
+	item = "mod2:itsthing:7"
+	min_size = 1
+	max_size = 1
+	weight = 2
+}
+{
+	type = "stuff"
+	operation = "add"
+	item = "mod3:morestuff"
+	min_size = 1
+	max_size = 4
+	weight = 4
+}
+{
+    type = "saplings"
+    operation = "addtier"
+    tier = "forestrysaplings"
+    weight_factor = 1
+}
+{
+    type = "crates"
+    operation = "addtier"
+    tier = "crates"
+    weight_factor = 1
+}

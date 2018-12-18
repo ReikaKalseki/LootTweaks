@@ -1,0 +1,15 @@
+{
+	type = "getridof"
+	operation = "remove"
+	item = "mod1:thething"
+}
+{
+	type = "nobook1"
+	operation = "remove"
+	item = "ChromatiCraft:chromaticraft_item_help"
+}
+{
+	type = "nobook2"
+	operation = "remove"
+	item = "Botania:lexicon"
+}

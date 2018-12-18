@@ -1,0 +1,25 @@
+{
+	type = "anidentifier"
+	operation = "changebounds"
+	item = "modname:itemname"
+	min_size = 8
+	max_size = 24
+}
+{
+	type = "anotherid"
+	operation = "changeweight"
+	item = "mod2:itsitem"
+	relative_weight = 0.2
+}
+{
+	type = "moreofsomething"
+	operation = "changeweight"
+	item = "mod3:thatthing"
+	relative_weight = 5
+}
+{
+	type = "moreofanotherthing"
+	operation = "changeweight"
+	item = "mod3:thatthing:1"
+	relative_weight = 5
+}
