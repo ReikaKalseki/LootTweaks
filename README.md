@@ -1,4 +1,4 @@
-RotaryCraft
+LootTweaks
 ===========
 
 The source code to LootTweaks.
