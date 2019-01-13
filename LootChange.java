@@ -42,6 +42,7 @@ public class LootChange implements Comparable<LootChange> {
 
 	public void apply(ChestGenHooks cgh, ArrayList<WeightedRandomChestContent> li, Field countMin, Field countMax) throws Exception {
 		type.apply(cgh, li, countMin, countMax, data);
+		LootTweaks.logger.log("Applying change type "+type+" '"+id+"'");
 	}
 
 	@Override
@@ -58,6 +59,7 @@ public class LootChange implements Comparable<LootChange> {
 		CHANGENBT(true),
 		CHANGECOUNTS(false),
 		ADDTIER(false),
+		REMOVETIER(false),
 		BATCH(false);
 
 		private final boolean hasItem;
@@ -78,7 +80,7 @@ public class LootChange implements Comparable<LootChange> {
 					}
 					li.add(new WeightedRandomChestContent(item, data.getInt("min_size"), data.getInt("max_size"), data.getInt("weight")));
 					break;
-				case ADDTIER:
+				case ADDTIER: {
 					String tier = data.getString("tier");
 					LootTier lt = LootTier.getTierByName(tier);
 					if (lt == null)
@@ -88,10 +90,12 @@ public class LootChange implements Comparable<LootChange> {
 					double weightFactor = data.getDouble("weight_factor");
 					int weight = (int)(lt.weight*weightFactor);
 					for (TierItemEntry is : lt.getItems()) {
+						LootTweaks.logger.log("Injecting item "+is.getItem().getDisplayName());
 						li.add(new WeightedRandomChestContent(is.getItem(), lt.minCount, lt.maxCount, Math.max(1, (int)(weight*is.relativeWeight))));
 					}
 					break;
-				case REMOVE:
+				}
+				case REMOVE: {
 					Iterator<WeightedRandomChestContent> it = li.iterator();
 					while (it.hasNext()) {
 						WeightedRandomChestContent wc = it.next();
@@ -102,6 +106,28 @@ public class LootChange implements Comparable<LootChange> {
 						}
 					}
 					break;
+				}
+				case REMOVETIER: {
+					String tier = data.getString("tier");
+					LootTier lt = LootTier.getTierByName(tier);
+					if (lt == null)
+						lt = LootTier.getTier(data.getInt("tier"));
+					if (lt == null)
+						throw new IllegalArgumentException("No such loot tier '"+tier+"'");
+					for (TierItemEntry is : lt.getItems()) {
+						LootTweaks.logger.log("Removing item "+is.getItem().getDisplayName());
+						Iterator<WeightedRandomChestContent> it = li.iterator();
+						while (it.hasNext()) {
+							WeightedRandomChestContent wc = it.next();
+							if (this.matchStack(wc, is.getItem(), matchNBT)) {
+								it.remove();
+								if (stopAtFirst)
+									break;
+							}
+						}
+					}
+					break;
+				}
 				case CHANGEBOUNDS:
 					for (WeightedRandomChestContent wc : li) {
 						if (this.matchStack(wc, item, matchNBT)) {

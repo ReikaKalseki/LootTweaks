@@ -1,8 +1,8 @@
 /*******************************************************************************
  * @author Reika Kalseki
- * 
+ *
  * Copyright 2017
- * 
+ *
  * All rights reserved.
  * Distribution of the software in any form is only allowed with
  * explicit, prior permission from the owner.
@@ -21,8 +21,11 @@ import Reika.DragonAPI.Base.DragonAPIMod;
 import Reika.DragonAPI.Base.DragonAPIMod.LoadProfiler.LoadPhase;
 import Reika.DragonAPI.Exception.RegistrationException;
 import Reika.DragonAPI.Instantiable.Event.ConfigReloadEvent;
+import Reika.DragonAPI.Instantiable.Event.Client.SinglePlayerLogoutEvent;
 import Reika.DragonAPI.Instantiable.IO.ModLogger;
 import Reika.DragonAPI.Instantiable.IO.SimpleConfig;
+import Reika.DragonAPI.Libraries.Java.ReikaObfuscationHelper;
+import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.Mod.EventHandler;
 import cpw.mods.fml.common.Mod.Instance;
@@ -32,6 +35,10 @@ import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerAboutToStartEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
+import cpw.mods.fml.common.network.FMLNetworkEvent.ClientConnectedToServerEvent;
+import cpw.mods.fml.common.network.FMLNetworkEvent.ClientDisconnectionFromServerEvent;
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 
 
 @Mod( modid = "LootTweaks", name="LootTweaks", version = "v@MAJOR_VERSION@@MINOR_VERSION@", certificateFingerprint = "@GET_FINGERPRINT@", dependencies="required-after:DragonAPI")
@@ -45,6 +52,10 @@ public class LootTweaks extends DragonAPIMod {
 	private static final SimpleConfig config = new SimpleConfig(instance);
 
 	private static File parentFolder;
+
+	public static File getDataFolder() {
+		return parentFolder;
+	}
 
 	@Override
 	@EventHandler
@@ -60,22 +71,13 @@ public class LootTweaks extends DragonAPIMod {
 		config.loadDataFromFile(evt);
 		config.finishReading();
 
-		try {
-			this.createFiles(evt);
-		}
-		catch (IOException e) {
-			throw new RuntimeException("Error creating loot files!", e);
-		}
-		catch (Exception e) {
-			throw new RegistrationException(this, "Error loading loot tables!", e);
-		}
-
+		FMLCommonHandler.instance().bus().register(this);
 		this.basicSetup(evt);
 		this.finishTiming();
 	}
 
-	private void createFiles(FMLPreInitializationEvent evt) throws Exception {
-		parentFolder = new File(evt.getModConfigurationDirectory(), "Reika/LootTweaksChanges");
+	private void createFiles() throws Exception {
+		parentFolder = new File(config.getConfigFolder(), "LootTweaksChanges");
 		if (!parentFolder.exists())
 			parentFolder.mkdirs();
 
@@ -85,7 +87,9 @@ public class LootTweaks extends DragonAPIMod {
 			if (!f.exists()) {
 				f.createNewFile();
 			}
+			LootTweaks.logger.log("Constructing loot table "+s+" from file "+f.getAbsolutePath());
 			LootTable lt = LootTable.construct(s, f);
+			LootTweaks.logger.log("Constructed loot table: "+lt);
 			lt.load(f);
 		}
 
@@ -103,6 +107,10 @@ public class LootTweaks extends DragonAPIMod {
 	public void load(FMLInitializationEvent event) {
 		this.startTiming(LoadPhase.LOAD);
 
+		if (!ReikaObfuscationHelper.isDeObfEnvironment() && DragonAPICore.isOnActualServer()) {
+			//PlayerHandler.instance.registerTracker(new LootSyncer());
+		}
+
 		this.finishTiming();
 	}
 
@@ -110,15 +118,50 @@ public class LootTweaks extends DragonAPIMod {
 	@EventHandler
 	public void postload(FMLPostInitializationEvent evt) {
 		this.startTiming(LoadPhase.POSTLOAD);
+
+		try {
+			this.createFiles();
+		}
+		catch (IOException e) {
+			throw new RuntimeException("Error creating loot files!", e);
+		}
+		catch (Exception e) {
+			throw new RegistrationException(this, "Error loading loot tables!", e);
+		}
+
 		this.finishTiming();
 	}
 
 	@EventHandler
 	public void applyData(FMLServerAboutToStartEvent evt) {
+		this.applyLootChanges();
+	}
+
+	@SubscribeEvent
+	@SideOnly(Side.CLIENT)
+	public void applyDataForClient(ClientConnectedToServerEvent evt) { //fired on client when logging into a server
+		if (!evt.isLocal)
+			this.applyLootChanges();
+	}
+
+	@SubscribeEvent
+	@SideOnly(Side.CLIENT)
+	public void undoServerChanges(ClientDisconnectionFromServerEvent evt) { //fired on client when logging out of a server
+		if (!evt.manager.isLocalChannel())
+			this.undoLootChanges();
+	}
+
+	@SubscribeEvent
+	@SideOnly(Side.CLIENT)
+	public void undoServerChanges(SinglePlayerLogoutEvent evt) {
+		this.undoLootChanges();
+	}
+
+	private void applyLootChanges() {
 		try {
-			if (allowReload()) {
-				LootTable.cacheDefaults();
-			}
+			//if (allowReload()) {
+			LootTable.cacheDefaults();
+			//}
 			LootTier.loadTierFiles();
 			BatchChange.loadBatchFiles();
 			LootTable.applyAll();
@@ -128,9 +171,21 @@ public class LootTweaks extends DragonAPIMod {
 		}
 	}
 
+	private void undoLootChanges() {
+		//if (allowReload()) {
+		try {
+			LootTable.restoreDefaults();
+		}
+		catch (Exception e) {
+			throw new RuntimeException("Errored while reverting loot changes.", e);
+		}
+		//}
+	}
+
 	@EventHandler
 	public void applyData(FMLServerStartingEvent evt) {
 		evt.registerServerCommand(new LootReloadCommand());
+		evt.registerServerCommand(new LootDumpCommand());
 	}
 
 	public static boolean allowReload() {
