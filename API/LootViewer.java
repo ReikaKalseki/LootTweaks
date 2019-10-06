@@ -4,8 +4,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 
+import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.WeightedRandomChestContent;
+
 import Reika.DragonAPI.Libraries.Java.ReikaJavaLibrary;
 
 
@@ -50,7 +52,17 @@ public class LootViewer {
 		}
 
 		public ItemStack getItem() {
-			return item.theItemId.copy();
+			try {
+				return item.theItemId.copy();
+			}
+			catch (Exception e) {
+				try {
+					return new ItemStack(item.theItemId.getItem(), 1, item.theItemId.getItemDamage());
+				}
+				catch (Exception e2) {
+					return new ItemStack(Blocks.grass);
+				}
+			}
 		}
 
 		public int[] getStackSizeRange() {

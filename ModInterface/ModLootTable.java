@@ -12,11 +12,12 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Set;
 
+import net.minecraft.util.WeightedRandomChestContent;
+
 import Reika.DragonAPI.ModList;
 import Reika.DragonAPI.Libraries.Java.ReikaJavaLibrary;
 import Reika.LootTweaks.LootChange;
 import Reika.LootTweaks.LootTable;
-import net.minecraft.util.WeightedRandomChestContent;
 
 
 public abstract class ModLootTable extends LootTable {
@@ -26,7 +27,7 @@ public abstract class ModLootTable extends LootTable {
 	private static final HashMap<String, ModLootTableEntry> list = new HashMap();
 	private static boolean wasInitialized = false;
 
-	protected ModLootTable(ModList mod, String s, File ref) {
+	protected ModLootTable(ModList mod, String s, File ref) throws IOException {
 		super(s, ref);
 		source = mod;
 		if (mod.isLoaded())
@@ -37,7 +38,7 @@ public abstract class ModLootTable extends LootTable {
 	public abstract WeightedRandomChestContent[] getItems();
 
 	@Override
-	protected final void applyChanges(Field min, Field max) throws Exception {
+	protected final void doApplyChanges(Field min, Field max) throws Exception {
 		ArrayList<WeightedRandomChestContent> li = ReikaJavaLibrary.makeListFromArray(this.getItems());
 		for (LootChange c : changes) {
 			c.apply(null, li, min, max);
@@ -65,6 +66,11 @@ public abstract class ModLootTable extends LootTable {
 			return ctr.newInstance(f);
 		}
 
+		@Override
+		public final String toString() {
+			return key;
+		}
+
 	}
 
 	public static Set<String> getModTables() {
@@ -75,9 +81,12 @@ public abstract class ModLootTable extends LootTable {
 		return list.containsKey(s);
 	}
 
-	public static LootTable construct(String s, File f) {
+	public static LootTable construct(String s, File f) throws IOException {
 		try {
 			return list.get(s).constructLootTable(f);
+		}
+		catch (IOException e) {
+			throw e;
 		}
 		catch (Exception e) {
 			throw new RuntimeException("Could not create handler for loot '"+s+"'!", e);
@@ -89,7 +98,7 @@ public abstract class ModLootTable extends LootTable {
 			return;
 		wasInitialized = true;
 		try {
-			for (Class c : ReikaJavaLibrary.getAllClassesFromPackage("Reika.LootTweaks.ModInterface")) {
+			for (Class c : ReikaJavaLibrary.getAllClassesFromPackage("Reika.LootTweaks.ModInterface", null, false, false)) {
 				try {
 					Method init = c.getDeclaredMethod("getInit");
 					Collection<ModLootTableEntry> li = (Collection<ModLootTableEntry>)init.invoke(null);

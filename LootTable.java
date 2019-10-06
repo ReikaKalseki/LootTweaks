@@ -10,6 +10,7 @@
 package Reika.LootTweaks;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -17,6 +18,15 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import net.minecraft.entity.projectile.EntityFishHook;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.WeightedRandomChestContent;
+import net.minecraft.util.WeightedRandomFishable;
+import net.minecraft.world.gen.structure.StructureNetherBridgePieces;
+import net.minecraftforge.common.ChestGenHooks;
 
 import Reika.DragonAPI.DragonAPICore;
 import Reika.DragonAPI.IO.ReikaFileReader;
@@ -31,14 +41,6 @@ import Reika.LootTweaks.API.LootHooks.LootTableAccess;
 import Reika.LootTweaks.API.LootViewer;
 import Reika.LootTweaks.API.LootViewer.LootItem;
 import Reika.LootTweaks.ModInterface.ModLootTable;
-import net.minecraft.entity.projectile.EntityFishHook;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.WeightedRandomChestContent;
-import net.minecraft.util.WeightedRandomFishable;
-import net.minecraft.world.gen.structure.StructureNetherBridgePieces;
-import net.minecraftforge.common.ChestGenHooks;
 
 
 public class LootTable implements LootTableAccess {
@@ -49,12 +51,13 @@ public class LootTable implements LootTableAccess {
 	private static Field chestCountMax;
 
 	public final String key;
-	private final String referenceFile;
+	public final String referenceFile;
 
 	static final CustomRecipeList parser = new CustomRecipeList(LootTweaks.instance, "");
 
 	protected final ArrayList<LootChange> changes = new ArrayList();
 
+	//private static final String EVERYTHING_KEY = "!all_loot_tables";
 	private static final String NETHER_FORTRESS_KEY = "netherFortress";
 	private static final String FISHING_KEY = "fishing";
 
@@ -63,19 +66,23 @@ public class LootTable implements LootTableAccess {
 
 	private boolean applied = false;
 
-	protected LootTable(String s, File ref) {
+	protected LootTable(String s, File ref) throws IOException {
 		key = s;
 		referenceFile = ref != null ? ref.getAbsolutePath() : null;
 		if (ref != null) {
 			tables.put(key, this);
+			if (!ref.exists()) {
+				ref.getParentFile().mkdirs();
+				ref.createNewFile();
+			}
 		}
 	}
 
-	public static LootTable construct(String s, File f) {
+	public static LootTable construct(String s, File f) throws IOException {
 		if (s.equals(NETHER_FORTRESS_KEY))
 			return new NetherFortressLootTable(f);
 		else if (s.equals(FISHING_KEY))
-			return new NetherFortressLootTable(f);
+			return new FishingLootTable(f);
 		else if (ModLootTable.isModTable(s))
 			return ModLootTable.construct(s, f);
 		else
@@ -100,11 +107,12 @@ public class LootTable implements LootTableAccess {
 	}
 
 	public static Collection<String> getValidTables() throws Exception {
-		Collection<String> c = new ArrayList(((Map<String, ChestGenHooks>)chestTable.get(null)).keySet());
+		ArrayList<String> c = new ArrayList(((Map<String, ChestGenHooks>)chestTable.get(null)).keySet());
 		c.add(NETHER_FORTRESS_KEY);
 		c.add(FISHING_KEY);
 		ModLootTable.initializeModTables();
 		c.addAll(ModLootTable.getModTables());
+		//c.add(0, EVERYTHING_KEY);
 		return c;
 	}
 
@@ -116,7 +124,8 @@ public class LootTable implements LootTableAccess {
 			return new LootViewer(s, unpackFishLoot(EntityFishHook.field_146041_e));
 		}
 		else if (ModLootTable.isModTable(s)) {
-			return new LootViewer(s, ((ModLootTable)tables.get(s)).getItems());
+			ModLootTable table = (ModLootTable)tables.get(s);
+			return new LootViewer(table.source.getDisplayName()+" - "+s, table.getItems());
 		}
 		else {
 			ChestGenHooks cgh = ((Map<String, ChestGenHooks>)chestTable.get(null)).get(s);
@@ -169,13 +178,27 @@ public class LootTable implements LootTableAccess {
 		parser.load(f);
 		changes.clear();
 		for (LuaBlock lb : parser.getEntries()) {
-			changes.add(new LootChange(lb));
+			if (lb.getString("operation").equals("batch")) {
+				String s = lb.getString("entry");
+				BatchChange bc = BatchChange.getBatch(s);
+				if (bc == null) {
+					throw new IllegalArgumentException("No such batch file '"+s+"'!");
+				}
+				else {
+					Collection<LootChange> li = bc.getChanges();
+					changes.addAll(li);
+					LootTweaks.logger.log("Parsed reference to batch '"+s+"' for loot table '"+key+"'; has "+changes.size()+" changes");
+				}
+			}
+			else {
+				changes.add(new LootChange(lb));
+			}
 		}
 		Collections.sort(changes);
 		parser.clear();
 	}
 
-	protected void applyChanges(Field min, Field max) throws Exception {
+	protected final void applyChanges(Field min, Field max) {
 		if (changes.isEmpty())
 			return;
 		if (applied) {
@@ -184,21 +207,25 @@ public class LootTable implements LootTableAccess {
 		applied = true;
 		LootTweaks.logger.log("Applying "+changes.size()+" changes to loot table "+key);
 		try {
-			ChestGenHooks cgh = ((Map<String, ChestGenHooks>)chestTable.get(null)).get(key);
-			ArrayList<WeightedRandomChestContent> li = (ArrayList<WeightedRandomChestContent>)chestContents.get(cgh);
-			for (LootChange c : changes) {
-				try {
-					c.apply(cgh, li, min, max);
-				}
-				catch (Exception e) {
-					applied = false;
-					throw new RuntimeException("Could not apply loot change '"+c.id+"'", e);
-				}
-			}
+			this.doApplyChanges(min, max);
 		}
 		catch (Exception e) {
 			applied = false;
 			throw new RuntimeException("Error modifying loot table '"+key+"'.", e);
+		}
+	}
+
+	protected void doApplyChanges(Field min, Field max) throws Exception {
+		ChestGenHooks cgh = ((Map<String, ChestGenHooks>)chestTable.get(null)).get(key);
+		ArrayList<WeightedRandomChestContent> li = (ArrayList<WeightedRandomChestContent>)chestContents.get(cgh);
+		for (LootChange c : changes) {
+			try {
+				c.apply(cgh, li, min, max);
+			}
+			catch (Exception e) {
+				applied = false;
+				throw new RuntimeException("Could not apply loot change '"+c.id+"'", e);
+			}
 		}
 	}
 
@@ -263,12 +290,12 @@ public class LootTable implements LootTableAccess {
 
 	private static class NetherFortressLootTable extends LootTable {
 
-		protected NetherFortressLootTable(File f) {
+		protected NetherFortressLootTable(File f) throws IOException {
 			super(NETHER_FORTRESS_KEY, f);
 		}
 
 		@Override
-		protected void applyChanges(Field min, Field max) throws Exception {
+		protected void doApplyChanges(Field min, Field max) throws Exception {
 			ArrayList<WeightedRandomChestContent> li = ReikaJavaLibrary.makeListFromArray(StructureNetherBridgePieces.Piece.field_111019_a);
 			for (LootChange c : changes) {
 				c.apply(null, li, min, max);
@@ -280,12 +307,12 @@ public class LootTable implements LootTableAccess {
 
 	private static class FishingLootTable extends LootTable {
 
-		protected FishingLootTable(File f) {
+		protected FishingLootTable(File f) throws IOException {
 			super(FISHING_KEY, f);
 		}
 
 		@Override
-		protected void applyChanges(Field min, Field max) throws Exception {
+		protected void doApplyChanges(Field min, Field max) throws Exception {
 			ArrayList<WeightedRandomChestContent> li = unpackFishLoot(EntityFishHook.field_146041_e);
 			for (LootChange c : changes) {
 				c.apply(null, li, min, max);

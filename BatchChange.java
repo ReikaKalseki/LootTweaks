@@ -1,8 +1,8 @@
 /*******************************************************************************
  * @author Reika Kalseki
- * 
+ *
  * Copyright 2017
- * 
+ *
  * All rights reserved.
  * Distribution of the software in any form is only allowed with
  * explicit, prior permission from the owner.
@@ -10,12 +10,11 @@
 package Reika.LootTweaks;
 
 import java.io.File;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 
-import net.minecraft.util.WeightedRandomChestContent;
-import net.minecraftforge.common.ChestGenHooks;
 import Reika.DragonAPI.IO.ReikaFileReader;
 import Reika.DragonAPI.Instantiable.IO.LuaBlock;
 
@@ -60,13 +59,12 @@ public class BatchChange {
 		for (LuaBlock lb : LootTable.parser.getEntries()) {
 			bc.changes.add(new LootChange(lb));
 		}
+		LootTweaks.logger.log("Parsed batch '"+bc.name+"' with "+bc.changes.size()+" changes: "+bc.changes);
 		LootTable.parser.clear();
 	}
 
-	public void apply(ChestGenHooks cgh, ArrayList<WeightedRandomChestContent> li, Field countMin, Field countMax, LuaBlock data) throws Exception {
-		for (LootChange c : changes) {
-			c.apply(cgh, li, countMin, countMax);
-		}
+	public Collection<LootChange> getChanges() {
+		return Collections.unmodifiableCollection(changes);
 	}
 
 }

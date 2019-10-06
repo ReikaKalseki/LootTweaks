@@ -1,18 +1,20 @@
 package Reika.LootTweaks.ModInterface;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.WeightedRandomChestContent;
+import net.minecraftforge.common.ChestGenHooks;
+
 import Reika.DragonAPI.ModList;
 import Reika.DragonAPI.Libraries.Java.ReikaJavaLibrary;
 import Reika.DragonAPI.Libraries.Registry.ReikaItemHelper;
 import Reika.LootTweaks.ModInterface.ModLootTable.ModLootTableEntry;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.WeightedRandomChestContent;
-import net.minecraftforge.common.ChestGenHooks;
 
 public class TwilightLootTables {
 
@@ -54,12 +56,14 @@ public class TwilightLootTables {
 	private static Object getTreasureEntry(String s) throws Exception {
 		Class c = getOrCreateCoreClass();
 		Field f = c.getDeclaredField(s);
+		f.setAccessible(true);
 		return f.get(null);
 	}
 
 	private static Object getTreasureTable(Object entry, String table) throws Exception {
 		Class c = getOrCreateCoreClass();
 		Field f = c.getDeclaredField(table);
+		f.setAccessible(true);
 		return f.get(entry);
 	}
 
@@ -72,6 +76,7 @@ public class TwilightLootTables {
 	private static Collection<WeightedRandomChestContent> getItems(Object table) throws Exception {
 		Collection<WeightedRandomChestContent> c = new ArrayList();
 		Field f = table.getClass().getDeclaredField("list");
+		f.setAccessible(true);
 		ArrayList li = (ArrayList)f.get(table);
 		for (Object o : li) {
 			c.add(convertLootItem(o));
@@ -128,8 +133,8 @@ public class TwilightLootTables {
 		private final String location;
 		private final String rarity;
 
-		protected TFTable(String s, String r, File f) {
-			super(ModList.TWILIGHT, s, f);
+		protected TFTable(String s, String r, File f) throws IOException {
+			super(ModList.TWILIGHT, s+"_"+r, f);
 			location = s;
 			rarity = r;
 		}

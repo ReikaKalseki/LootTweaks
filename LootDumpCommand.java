@@ -11,9 +11,10 @@ package Reika.LootTweaks;
 
 import java.io.File;
 
-import Reika.DragonAPI.Command.DragonCommandBase;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.util.EnumChatFormatting;
+
+import Reika.DragonAPI.Command.DragonCommandBase;
 
 
 public class LootDumpCommand extends DragonCommandBase {

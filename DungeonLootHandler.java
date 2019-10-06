@@ -1,8 +1,8 @@
 /*******************************************************************************
  * @author Reika Kalseki
- * 
+ *
  * Copyright 2017
- * 
+ *
  * All rights reserved.
  * Distribution of the software in any form is only allowed with
  * explicit, prior permission from the owner.
@@ -12,15 +12,19 @@ package Reika.LootTweaks;
 import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
+
+import org.lwjgl.opengl.GL11;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.enchantment.Enchantment;
+import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
-
-import org.lwjgl.opengl.GL11;
 
 import Reika.DragonAPI.Libraries.ReikaEnchantmentHelper;
 import Reika.DragonAPI.Libraries.IO.ReikaGuiAPI;
@@ -28,10 +32,38 @@ import Reika.DragonAPI.Libraries.Java.ReikaGLHelper.BlendMode;
 import Reika.DragonAPI.Libraries.Registry.ReikaItemHelper;
 import Reika.LootTweaks.API.LootViewer;
 import Reika.LootTweaks.API.LootViewer.LootItem;
+
 import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.TemplateRecipeHandler;
 
 public class DungeonLootHandler extends TemplateRecipeHandler {
+
+	private final Comparator<CachedRecipe> displaySorter = new Comparator<CachedRecipe>() {
+
+		@Override
+		public int compare(CachedRecipe o1, CachedRecipe o2) {
+			if (o1 instanceof LootTableEntry && o2 instanceof LootTableEntry) {
+				LootTableEntry l1 = (LootTableEntry)o1;
+				LootTableEntry l2 = (LootTableEntry)o2;
+				int idx1 = l1.chestType.indexOf('-');
+				int idx2 = l2.chestType.indexOf('-');
+				if ((idx2 == -1) != (idx1 == -1)) {
+					return idx1 == -1 ? -1 : 1;
+				}
+				int ret = l1.chestType.compareTo(l2.chestType);
+				return ret*1000000+Integer.compare(l2.item.getWeight(), l1.item.getWeight());//ReikaItemHelper.comparator.compare(l1.item.getItem(), l2.item.getItem());
+			}
+			else if (o1 instanceof LootTableEntry) {
+				return Integer.MAX_VALUE;
+			}
+			else if (o2 instanceof LootTableEntry) {
+				return Integer.MIN_VALUE;
+			}
+			else
+				return 0;
+		}
+
+	};
 
 	public class LootTableEntry extends CachedRecipe {
 
@@ -96,7 +128,7 @@ public class DungeonLootHandler extends TemplateRecipeHandler {
 				for (String s : c) {
 					LootViewer lw = LootTable.getLootViewer(s);
 					for (LootItem li : lw.getLoot()) {
-						arecipes.add(new LootTableEntry(s, li));
+						arecipes.add(new LootTableEntry(lw.location, li));
 					}
 				}
 			}
@@ -104,6 +136,7 @@ public class DungeonLootHandler extends TemplateRecipeHandler {
 				e.printStackTrace();
 			}
 		}
+		Collections.sort(arecipes, displaySorter);
 		super.loadCraftingRecipes(outputId, results);
 	}
 
@@ -116,6 +149,7 @@ public class DungeonLootHandler extends TemplateRecipeHandler {
 	public void loadCraftingRecipes(ItemStack result) {
 		super.loadCraftingRecipes(result);
 		arecipes.addAll(this.getEntriesForItem(result));
+		Collections.sort(arecipes, displaySorter);
 	}
 
 	private Collection<LootTableEntry> getEntriesForItem(ItemStack is) {
@@ -126,7 +160,7 @@ public class DungeonLootHandler extends TemplateRecipeHandler {
 				LootViewer lw = LootTable.getLootViewer(s);
 				for (LootItem lti : lw.getLoot()) {
 					if (ReikaItemHelper.matchStacks(lti.getItem(), is))
-						arecipes.add(new LootTableEntry(s, lti));
+						li.add(new LootTableEntry(s, lti));
 				}
 			}
 		}
@@ -166,7 +200,14 @@ public class DungeonLootHandler extends TemplateRecipeHandler {
 			api.drawCenteredStringNoShadow(fr, "Location: '"+e.chestType+"'", 82, 5, 0x000000);
 			String n = wc.getItem().getDisplayName();
 			int dy = 0;
-			if (wc.getItem().isItemEnchanted()) {
+			if (wc.getItem().getItem() == Items.enchanted_book) {
+				HashMap<Enchantment, Integer> map = ReikaEnchantmentHelper.getEnchantments(wc.getItem());
+				for (Enchantment en : map.keySet()) {
+					fr.drawString(en.getTranslatedName(map.get(en)), 34, 31+dy, 0x505050);
+					dy += 11;
+				}
+			}
+			else if (wc.getItem().isItemEnchanted()) {
 				n = n+", Enchanted";
 				HashMap<Enchantment, Integer> map = ReikaEnchantmentHelper.getEnchantments(wc.getItem());
 				for (Enchantment en : map.keySet()) {
@@ -175,6 +216,12 @@ public class DungeonLootHandler extends TemplateRecipeHandler {
 				}
 			}
 			fr.drawString(n, 26, 20, 0x000000);
+			List<String> li = new ArrayList();
+			wc.getItem().getItem().addInformation(wc.getItem(), Minecraft.getMinecraft().thePlayer, li, true);
+			for (String s : li) {
+				fr.drawString(s, 34, 31+dy, 0x505050);
+				dy += 11;
+			}
 			int[] sizes = wc.getStackSizeRange();
 			String counts = sizes.length == 1 ? sizes[0]+"x" : sizes[0]+"x - "+sizes[1]+"x";
 			fr.drawString("Stack Size: "+counts, 26, 31+dy, 0x000000);

@@ -1,15 +1,17 @@
 package Reika.LootTweaks.ModInterface;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 
+import net.minecraft.util.WeightedRandomChestContent;
+import net.minecraftforge.common.ChestGenHooks;
+
 import Reika.DragonAPI.ModList;
 import Reika.DragonAPI.Libraries.Java.ReikaJavaLibrary;
 import Reika.DragonAPI.Libraries.Java.ReikaReflectionHelper;
-import net.minecraft.util.WeightedRandomChestContent;
-import net.minecraftforge.common.ChestGenHooks;
 
 public abstract class ReflectiveLootTable extends ModLootTable {
 
@@ -17,7 +19,7 @@ public abstract class ReflectiveLootTable extends ModLootTable {
 	private Object referenceObject;
 	private Field referenceField;
 
-	protected ReflectiveLootTable(ModList mod, String c, String f, String s, File ref) {
+	protected ReflectiveLootTable(ModList mod, String c, String f, String s, File ref) throws IOException {
 		super(mod, s, ref);
 		if (mod.isLoaded()) {
 			try {

@@ -1,8 +1,8 @@
 /*******************************************************************************
  * @author Reika Kalseki
- * 
+ *
  * Copyright 2017
- * 
+ *
  * All rights reserved.
  * Distribution of the software in any form is only allowed with
  * explicit, prior permission from the owner.
@@ -17,6 +17,7 @@ import java.util.Locale;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.WeightedRandomChestContent;
 import net.minecraftforge.common.ChestGenHooks;
+
 import Reika.DragonAPI.Instantiable.IO.LuaBlock;
 import Reika.DragonAPI.Libraries.ReikaNBTHelper;
 import Reika.DragonAPI.Libraries.Registry.ReikaItemHelper;
@@ -59,8 +60,7 @@ public class LootChange implements Comparable<LootChange> {
 		CHANGENBT(true),
 		CHANGECOUNTS(false),
 		ADDTIER(false),
-		REMOVETIER(false),
-		BATCH(false);
+		REMOVETIER(false);
 
 		private final boolean hasItem;
 
@@ -167,13 +167,6 @@ public class LootChange implements Comparable<LootChange> {
 					break;
 				case CLEAR:
 					li.clear();
-					break;
-				case BATCH:
-					String s = data.getString("entry");
-					BatchChange bc = BatchChange.getBatch(s);
-					if (bc == null)
-						throw new IllegalArgumentException("No such batch file '"+s+"'!");
-					bc.apply(cgh, li, countMin, countMax, data);
 					break;
 			}
 		}

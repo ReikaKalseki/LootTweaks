@@ -25,6 +25,7 @@ import Reika.DragonAPI.Instantiable.Event.Client.SinglePlayerLogoutEvent;
 import Reika.DragonAPI.Instantiable.IO.ModLogger;
 import Reika.DragonAPI.Instantiable.IO.SimpleConfig;
 import Reika.DragonAPI.Libraries.Java.ReikaObfuscationHelper;
+
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.Mod.EventHandler;
@@ -81,25 +82,23 @@ public class LootTweaks extends DragonAPIMod {
 		if (!parentFolder.exists())
 			parentFolder.mkdirs();
 
+		BatchChange.folder = new File(parentFolder, "Batch");
+		if (!BatchChange.folder.exists())
+			BatchChange.folder.mkdir();
+		BatchChange.loadBatchFiles();
+
 		Collection<String> c = LootTable.getValidTables();
 		for (String s : c) {
 			File f = new File(parentFolder, s+".tweaks");
-			if (!f.exists()) {
-				f.createNewFile();
-			}
 			LootTweaks.logger.log("Constructing loot table "+s+" from file "+f.getAbsolutePath());
 			LootTable lt = LootTable.construct(s, f);
 			LootTweaks.logger.log("Constructed loot table: "+lt);
-			lt.load(f);
+			lt.load(new File(lt.referenceFile));
 		}
 
 		LootTier.folder = new File(parentFolder, "Tiers");
 		if (!LootTier.folder.exists())
 			LootTier.folder.mkdir();
-
-		BatchChange.folder = new File(parentFolder, "Batch");
-		if (!BatchChange.folder.exists())
-			BatchChange.folder.mkdir();
 	}
 
 	@Override
@@ -163,7 +162,6 @@ public class LootTweaks extends DragonAPIMod {
 			LootTable.cacheDefaults();
 			//}
 			LootTier.loadTierFiles();
-			BatchChange.loadBatchFiles();
 			LootTable.applyAll();
 		}
 		catch (Exception e) {
