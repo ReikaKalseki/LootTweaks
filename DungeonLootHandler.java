@@ -27,9 +27,9 @@ import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 
 import Reika.DragonAPI.Libraries.ReikaEnchantmentHelper;
-import Reika.DragonAPI.Libraries.IO.ReikaGuiAPI;
 import Reika.DragonAPI.Libraries.Java.ReikaGLHelper.BlendMode;
 import Reika.DragonAPI.Libraries.Registry.ReikaItemHelper;
+import Reika.DragonAPI.Libraries.Rendering.ReikaGuiAPI;
 import Reika.LootTweaks.API.LootViewer;
 import Reika.LootTweaks.API.LootViewer.LootItem;
 
