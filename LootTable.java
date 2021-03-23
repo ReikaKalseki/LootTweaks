@@ -68,7 +68,7 @@ public class LootTable implements LootTableAccess {
 
 	protected LootTable(String s, File ref) throws IOException {
 		key = s;
-		referenceFile = ref != null ? ref.getAbsolutePath() : null;
+		referenceFile = ref != null ? ref.getCanonicalPath() : null;
 		if (ref != null) {
 			tables.put(key, this);
 			if (!ref.exists()) {

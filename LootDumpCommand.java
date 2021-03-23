@@ -15,6 +15,7 @@ import net.minecraft.command.ICommandSender;
 import net.minecraft.util.EnumChatFormatting;
 
 import Reika.DragonAPI.Command.DragonCommandBase;
+import Reika.DragonAPI.IO.ReikaFileReader;
 
 
 public class LootDumpCommand extends DragonCommandBase {
@@ -23,7 +24,7 @@ public class LootDumpCommand extends DragonCommandBase {
 	public void processCommand(ICommandSender ics, String[] args) {
 		File f = new File(LootTweaks.getDataFolder(), "Dump");
 		LootTable.dumpTables(f);
-		this.sendChatToSender(ics, EnumChatFormatting.GREEN+"Loot tables dumped to "+f.getAbsolutePath());
+		this.sendChatToSender(ics, EnumChatFormatting.GREEN+"Loot tables dumped to "+ReikaFileReader.getRealPath(f));
 	}
 
 	@Override
