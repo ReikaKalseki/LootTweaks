@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -35,6 +36,7 @@ import Reika.DragonAPI.Instantiable.IO.LuaBlock;
 import Reika.DragonAPI.Instantiable.IO.LuaBlock.ItemStackLuaBlock;
 import Reika.DragonAPI.Instantiable.IO.LuaBlock.LuaBlockDatabase;
 import Reika.DragonAPI.Instantiable.Worldgen.LootController;
+import Reika.DragonAPI.Instantiable.Worldgen.LootController.ChestGenLootLocation;
 import Reika.DragonAPI.Libraries.Java.ReikaJavaLibrary;
 import Reika.DragonAPI.Libraries.Java.ReikaObfuscationHelper;
 import Reika.DragonAPI.ModInteract.DeepInteract.MTInteractionManager;
@@ -46,6 +48,7 @@ import Reika.LootTweaks.ModInterface.ModLootTable;
 
 public class LootTable implements LootTableAccess {
 
+	private static Field chestTable;
 	private static Field chestCountMin;
 	private static Field chestCountMax;
 
@@ -77,10 +80,10 @@ public class LootTable implements LootTableAccess {
 	}
 
 	public static LootTable construct(String s, File f) throws IOException {
-		if (s.equals(NETHER_FORTRESS_KEY))
-			return new NetherFortressLootTable(f);
-		else if (s.equals(FISHING_KEY))
+		if (s.equals(FISHING_KEY))
 			return new FishingLootTable(f);
+		else if (isHandledLocation(s))
+			return new LocationLootTable(LootController.getLocationForID(s), f);
 		else if (ModLootTable.isModTable(s))
 			return ModLootTable.construct(s, f);
 		else
@@ -89,24 +92,28 @@ public class LootTable implements LootTableAccess {
 
 	private static Default constructDefault(String s) throws Exception {
 		LootTweaks.logger.log("Constructing default "+s);
-		if (s.equals(NETHER_FORTRESS_KEY)) {
-			return new NetherFortressDefault();
-		}
-		else if (s.equals(FISHING_KEY)) {
+		if (s.equals(FISHING_KEY)) {
 			return new FishingDefault();
+		}
+		else if (isHandledLocation(s)) {
+			return new LocationDefault(LootController.getLocationForID(s));
 		}
 		else if (ModLootTable.isModTable(s)) {
 			return ((ModLootTable)tables.get(s)).createDefault();
 		}
 		else {
-			ChestGenHooks cgh = ((Map<String, ChestGenHooks>)chestTable.get(null)).get(s);
+			ChestGenHooks cgh = LootController.getChestEntry(s);
 			return new Default(cgh);
 		}
 	}
 
+	private static boolean isHandledLocation(String s) {
+		return LootController.getLocationForID(s) != null;
+	}
+
 	public static Collection<String> getValidTables() throws Exception {
-		ArrayList<String> c = new ArrayList(((Map<String, ChestGenHooks>)chestTable.get(null)).keySet());
-		c.add(NETHER_FORTRESS_KEY);
+		HashSet<String> c = new HashSet(((Map<String, ChestGenHooks>)chestTable.get(null)).keySet());
+		c.addAll(LootController.getAllIDs());
 		c.add(FISHING_KEY);
 		ModLootTable.initializeModTables();
 		c.addAll(ModLootTable.getModTables());
@@ -286,19 +293,22 @@ public class LootTable implements LootTableAccess {
 
 	}
 
-	private static class NetherFortressLootTable extends LootTable {
+	private static class LocationLootTable extends LootTable {
 
-		protected NetherFortressLootTable(File f) throws IOException {
-			super(NETHER_FORTRESS_KEY, f);
+		private final ChestGenLootLocation table;
+
+		protected LocationLootTable(ChestGenLootLocation table, File f) throws IOException {
+			super(table.getTag(), f);
+			this.table = table;
 		}
 
 		@Override
 		protected void doApplyChanges(Field min, Field max) throws Exception {
-			ArrayList<WeightedRandomChestContent> li = ReikaJavaLibrary.makeListFromArray(StructureNetherBridgePieces.Piece.field_111019_a);
+			ArrayList<WeightedRandomChestContent> li = ReikaJavaLibrary.makeListFromArray(table.getContents());
 			for (LootChange c : changes) {
 				c.apply(null, li, min, max);
 			}
-			StructureNetherBridgePieces.Piece.field_111019_a = li.toArray(new WeightedRandomChestContent[li.size()]);
+			table.setContents(li.toArray(new WeightedRandomChestContent[li.size()]));
 		}
 
 	}
@@ -349,15 +359,18 @@ public class LootTable implements LootTableAccess {
 
 	}
 
-	private static class NetherFortressDefault extends Default {
+	private static class LocationDefault extends Default {
 
-		private NetherFortressDefault() throws Exception {
-			super(ReikaJavaLibrary.makeListFromArray(StructureNetherBridgePieces.Piece.field_111019_a), 0, 0);
+		private final ChestGenLootLocation table;
+
+		private LocationDefault(ChestGenLootLocation table) throws Exception {
+			super(ReikaJavaLibrary.makeListFromArray(table.getContents()), 0, 0);
+			this.table = table;
 		}
 
 		@Override
 		protected void restore(ChestGenHooks cgh) throws Exception {
-			StructureNetherBridgePieces.Piece.field_111019_a = items.toArray(new WeightedRandomChestContent[items.size()]);
+			table.setContents(items.toArray(new WeightedRandomChestContent[items.size()]));
 		}
 
 	}
@@ -432,6 +445,9 @@ public class LootTable implements LootTableAccess {
 
 	static {
 		try {
+			chestTable = ChestGenHooks.class.getDeclaredField("chestInfo");
+			chestTable.setAccessible(true);
+
 			chestCountMin = ChestGenHooks.class.getDeclaredField("countMin");
 			chestCountMin.setAccessible(true);
 
