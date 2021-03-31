@@ -14,7 +14,7 @@ import java.util.Set;
 
 import net.minecraft.util.WeightedRandomChestContent;
 
-import Reika.DragonAPI.ModList;
+import Reika.DragonAPI.Interfaces.Registry.ModEntry;
 import Reika.DragonAPI.Libraries.Java.ReikaJavaLibrary;
 import Reika.LootTweaks.LootChange;
 import Reika.LootTweaks.LootTable;
@@ -22,12 +22,12 @@ import Reika.LootTweaks.LootTable;
 
 public abstract class ModLootTable extends LootTable {
 
-	public final ModList source;
+	public final ModEntry source;
 
 	private static final HashMap<String, ModLootTableEntry> list = new HashMap();
 	private static boolean wasInitialized = false;
 
-	protected ModLootTable(ModList mod, String s, File ref) throws IOException {
+	protected ModLootTable(ModEntry mod, String s, File ref) throws IOException {
 		super(s, ref);
 		source = mod;
 		if (mod.isLoaded())
@@ -51,10 +51,10 @@ public abstract class ModLootTable extends LootTable {
 	public static class ModLootTableEntry {
 
 		public final String key;
-		public final ModList mod;
+		public final ModEntry mod;
 		private final Class refClass;
 
-		ModLootTableEntry(String s, Class<? extends ModLootTable> c, ModList mod) {
+		ModLootTableEntry(String s, Class<? extends ModLootTable> c, ModEntry mod) {
 			key = s;
 			this.mod = mod;
 			refClass = c;

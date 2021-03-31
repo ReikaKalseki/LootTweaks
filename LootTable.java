@@ -34,6 +34,7 @@ import Reika.DragonAPI.Instantiable.IO.CustomRecipeList;
 import Reika.DragonAPI.Instantiable.IO.LuaBlock;
 import Reika.DragonAPI.Instantiable.IO.LuaBlock.ItemStackLuaBlock;
 import Reika.DragonAPI.Instantiable.IO.LuaBlock.LuaBlockDatabase;
+import Reika.DragonAPI.Instantiable.Worldgen.LootController;
 import Reika.DragonAPI.Libraries.Java.ReikaJavaLibrary;
 import Reika.DragonAPI.Libraries.Java.ReikaObfuscationHelper;
 import Reika.DragonAPI.ModInteract.DeepInteract.MTInteractionManager;
@@ -45,8 +46,6 @@ import Reika.LootTweaks.ModInterface.ModLootTable;
 
 public class LootTable implements LootTableAccess {
 
-	private static Field chestTable;
-	private static Field chestContents;
 	private static Field chestCountMin;
 	private static Field chestCountMax;
 
@@ -58,7 +57,6 @@ public class LootTable implements LootTableAccess {
 	protected final ArrayList<LootChange> changes = new ArrayList();
 
 	//private static final String EVERYTHING_KEY = "!all_loot_tables";
-	private static final String NETHER_FORTRESS_KEY = "netherFortress";
 	private static final String FISHING_KEY = "fishing";
 
 	private static final HashMap<String, Default> defaultCache = new HashMap();
@@ -95,7 +93,7 @@ public class LootTable implements LootTableAccess {
 			return new NetherFortressDefault();
 		}
 		else if (s.equals(FISHING_KEY)) {
-			return new NetherFortressDefault();
+			return new FishingDefault();
 		}
 		else if (ModLootTable.isModTable(s)) {
 			return ((ModLootTable)tables.get(s)).createDefault();
@@ -117,7 +115,7 @@ public class LootTable implements LootTableAccess {
 	}
 
 	public static LootViewer getLootViewer(String s) throws Exception {
-		if (s.equals(NETHER_FORTRESS_KEY)) {
+		if (s.equals(LootController.netherFortress.getTag())) {
 			return new LootViewer(s, StructureNetherBridgePieces.Piece.field_111019_a);
 		}
 		else if (s.equals(FISHING_KEY)) {
@@ -128,7 +126,7 @@ public class LootTable implements LootTableAccess {
 			return new LootViewer(table.source.getDisplayName()+" - "+s, table.getItems());
 		}
 		else {
-			ChestGenHooks cgh = ((Map<String, ChestGenHooks>)chestTable.get(null)).get(s);
+			ChestGenHooks cgh = LootController.getChestEntry(s);
 			return new LootViewer(s, cgh.getItems(DragonAPICore.rand));
 		}
 	}
@@ -148,7 +146,7 @@ public class LootTable implements LootTableAccess {
 		for (String s : defaultCache.keySet()) {
 			try {
 				Default def = defaultCache.get(s);
-				ChestGenHooks cgh = ((Map<String, ChestGenHooks>)chestTable.get(null)).get(s);
+				ChestGenHooks cgh = LootController.getChestEntry(s);
 				def.restore(cgh);
 				tables.get(s).applied = false;
 			}
@@ -216,8 +214,8 @@ public class LootTable implements LootTableAccess {
 	}
 
 	protected void doApplyChanges(Field min, Field max) throws Exception {
-		ChestGenHooks cgh = ((Map<String, ChestGenHooks>)chestTable.get(null)).get(key);
-		ArrayList<WeightedRandomChestContent> li = (ArrayList<WeightedRandomChestContent>)chestContents.get(cgh);
+		ChestGenHooks cgh = LootController.getChestEntry(key);
+		ArrayList<WeightedRandomChestContent> li = LootController.getCGHItems(cgh);
 		for (LootChange c : changes) {
 			try {
 				c.apply(cgh, li, min, max);
@@ -330,7 +328,7 @@ public class LootTable implements LootTableAccess {
 
 		private Default(ChestGenHooks cgh) throws Exception {
 			items = new ArrayList();
-			for (WeightedRandomChestContent c : (ArrayList<WeightedRandomChestContent>)chestContents.get(cgh)) {
+			for (WeightedRandomChestContent c : LootController.getCGHItems(cgh)) {
 				items.add(copy(c));
 			}
 			countMin = chestCountMin.getInt(cgh);
@@ -344,7 +342,7 @@ public class LootTable implements LootTableAccess {
 		}
 
 		protected void restore(ChestGenHooks cgh) throws Exception {
-			chestContents.set(cgh, new ArrayList(items));
+			LootController.setCGHItems(cgh, items.toArray(new WeightedRandomChestContent[items.size()]));
 			chestCountMin.setInt(cgh, countMin);
 			chestCountMax.setInt(cgh, countMax);
 		}
@@ -434,12 +432,6 @@ public class LootTable implements LootTableAccess {
 
 	static {
 		try {
-			chestTable = ChestGenHooks.class.getDeclaredField("chestInfo");
-			chestTable.setAccessible(true);
-
-			chestContents = ChestGenHooks.class.getDeclaredField("contents");
-			chestContents.setAccessible(true);
-
 			chestCountMin = ChestGenHooks.class.getDeclaredField("countMin");
 			chestCountMin.setAccessible(true);
 

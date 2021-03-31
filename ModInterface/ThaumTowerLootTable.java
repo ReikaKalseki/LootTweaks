@@ -5,6 +5,7 @@ import java.io.IOException;
 
 import Reika.DragonAPI.ModList;
 
+@Deprecated
 public class ThaumTowerLootTable extends ReflectiveLootTable {
 
 	private static final String THAUM_TOWER_KEY = "thaumVillageTower";
