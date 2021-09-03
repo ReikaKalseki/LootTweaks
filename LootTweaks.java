@@ -90,10 +90,15 @@ public class LootTweaks extends DragonAPIMod {
 		Collection<String> c = LootTable.getValidTables();
 		for (String s : c) {
 			File f = new File(parentFolder, s+".tweaks");
-			LootTweaks.logger.log("Constructing loot table "+s+" from file "+f.getCanonicalPath());
-			LootTable lt = LootTable.construct(s, f);
-			LootTweaks.logger.log("Constructed loot table: "+lt);
-			lt.load(new File(lt.referenceFile));
+			try {
+				LootTweaks.logger.log("Constructing loot table "+s+" from file "+f.getCanonicalPath());
+				LootTable lt = LootTable.construct(s, f);
+				LootTweaks.logger.log("Constructed loot table: "+lt);
+				lt.load(new File(lt.referenceFile));
+			}
+			catch (Exception e) {
+				throw new RuntimeException("Error creating loot file '"+s+"' in "+f.getAbsolutePath(), e);
+			}
 		}
 
 		LootTier.folder = new File(parentFolder, "Tiers");
@@ -208,6 +213,11 @@ public class LootTweaks extends DragonAPIMod {
 	@Override
 	public URL getDocumentationSite() {
 		return DragonAPICore.getReikaForumPage();
+	}
+
+	@Override
+	public URL getBugSite() {
+		return DragonAPICore.getReikaGithubPage();
 	}
 
 	@Override
