@@ -89,7 +89,7 @@ public class LootTweaks extends DragonAPIMod {
 
 		Collection<String> c = LootTable.getValidTables();
 		for (String s : c) {
-			File f = new File(parentFolder, s+".tweaks");
+			File f = new File(parentFolder, this.getSafeFilename(s)+".tweaks");
 			try {
 				LootTweaks.logger.log("Constructing loot table "+s+" from file "+f.getCanonicalPath());
 				LootTable lt = LootTable.construct(s, f);
@@ -104,6 +104,10 @@ public class LootTweaks extends DragonAPIMod {
 		LootTier.folder = new File(parentFolder, "Tiers");
 		if (!LootTier.folder.exists())
 			LootTier.folder.mkdir();
+	}
+
+	private String getSafeFilename(String s) {
+		return s.replaceAll("[.:;,\\\\/|{}\\[\\]\"'()]", "-");
 	}
 
 	@Override
