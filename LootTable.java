@@ -190,7 +190,7 @@ public class LootTable implements LootTableAccess {
 					throw new IllegalArgumentException("No such batch file '"+s+"'!");
 				}
 				else {
-					Collection<LootChange> li = bc.getChanges();
+					Collection<BatchedChange> li = bc.getChanges();
 					changes.addAll(li);
 					LootTweaks.logger.log("Parsed reference to batch '"+s+"' for loot table '"+key+"'; has "+changes.size()+" changes");
 				}
@@ -218,6 +218,8 @@ public class LootTable implements LootTableAccess {
 			applied = false;
 			throw new RuntimeException("Error modifying loot table '"+key+"'.", e);
 		}
+		//LootTweaks.logger.log("Loot table contents: ");
+		LootTweaks.logger.log("--------------------");
 	}
 
 	protected void doApplyChanges(Field min, Field max) throws Exception {

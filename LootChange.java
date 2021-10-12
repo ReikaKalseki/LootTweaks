@@ -43,7 +43,7 @@ public class LootChange implements Comparable<LootChange> {
 
 	public void apply(ChestGenHooks cgh, ArrayList<WeightedRandomChestContent> li, Field countMin, Field countMax) throws Exception {
 		type.apply(cgh, li, countMin, countMax, data);
-		LootTweaks.logger.log("Applying change type "+type+" '"+id+"'");
+		LootTweaks.logger.log("Applied change type "+type+" '"+id+"'");
 	}
 
 	@Override
