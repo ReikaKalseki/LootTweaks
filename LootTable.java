@@ -190,7 +190,7 @@ public class LootTable implements LootTableAccess {
 					throw new IllegalArgumentException("No such batch file '"+s+"'!");
 				}
 				else {
-					Collection<BatchedChange> li = bc.getChanges();
+					Collection<LootChange> li = bc.getChanges();
 					changes.addAll(li);
 					LootTweaks.logger.log("Parsed reference to batch '"+s+"' for loot table '"+key+"'; has "+changes.size()+" changes");
 				}
