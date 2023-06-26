@@ -19,7 +19,6 @@ import net.minecraft.util.WeightedRandomChestContent;
 import net.minecraftforge.common.ChestGenHooks;
 
 import Reika.DragonAPI.Instantiable.IO.LuaBlock;
-import Reika.DragonAPI.Libraries.ReikaNBTHelper;
 import Reika.DragonAPI.Libraries.Registry.ReikaItemHelper;
 import Reika.LootTweaks.LootTier.TierItemEntry;
 
@@ -153,7 +152,7 @@ public class LootChange implements Comparable<LootChange> {
 				case CHANGENBT:
 					for (WeightedRandomChestContent wc : li) {
 						if (this.matchStack(wc, item, matchNBT)) {
-							wc.theItemId.stackTagCompound = data.hasChild("nbt") ? ReikaNBTHelper.constructNBT(data.getChild("nbt")) : null;
+							wc.theItemId.stackTagCompound = data.hasChild("nbt") ? data.getChild("nbt").asNBT() : null;
 							if (stopAtFirst)
 								break;
 						}
