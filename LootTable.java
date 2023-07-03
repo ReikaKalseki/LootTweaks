@@ -20,6 +20,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.base.Charsets;
+
 import net.minecraft.entity.projectile.EntityFishHook;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -280,7 +282,7 @@ public class LootTable implements LootTableAccess {
 				i++;
 			}
 			ArrayList<String> li = base.writeToStrings();
-			ReikaFileReader.writeLinesToFile(f, li, true);
+			ReikaFileReader.writeLinesToFile(f, li, true, Charsets.UTF_8);
 		}
 		catch (Exception e) {
 			throw new RuntimeException("Could not dump loot table '"+key+"'.", e);
